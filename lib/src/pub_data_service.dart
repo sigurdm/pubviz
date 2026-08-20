@@ -3,11 +3,14 @@ import 'dart:io';
 
 import 'service.dart';
 
+/// Service implementation that retrieves package information by invoking the
+/// pub CLI.
 final class PubDataService extends Service {
   @override
   final String rootPackageDir;
   final bool _debug;
 
+  /// Creates a [PubDataService] operating on [rootPackageDir].
   PubDataService(this.rootPackageDir, {bool debug = false}) : _debug = debug;
 
   @override

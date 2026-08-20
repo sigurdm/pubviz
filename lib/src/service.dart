@@ -353,6 +353,7 @@ abstract class Service {
     return info.latest;
   }
 
+  /// Returns the JSON representation of package outdated information.
   Map<String, dynamic> outdated();
 }
 
