@@ -34,7 +34,7 @@ dependencies:
 ''');
 
     stderr.writeln('Resolving dependencies for $name...');
-    final result = Process.runSync('dart', [
+    final result = Process.runSync(Platform.resolvedExecutable, [
       'pub',
       'get',
     ], workingDirectory: tempDir.path);

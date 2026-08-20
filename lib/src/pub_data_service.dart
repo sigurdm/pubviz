@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'deps_list.dart';
 import 'service.dart';
 
-class PubDataService extends Service {
+final class PubDataService extends Service {
   @override
   final String rootPackageDir;
   final bool _debug;
@@ -25,29 +24,6 @@ class PubDataService extends Service {
         );
       rethrow;
     }
-  }
-
-  late final _depsListCache = DepsList.parse(
-    _pubCommand(['deps', '-s', 'list']),
-  );
-
-  @override
-  DepsPackageEntry rootDeps() => _depsListCache.rootPackage;
-
-  @override
-  Iterable<DepsPackageEntry> allDeps() => _depsListCache.packages.values;
-
-  @override
-  Future<Map<String, String>> workspaceMembers() async {
-    final commandOutput = _pubCommand(['workspace', 'list', '--json']);
-    return switch (jsonDecode(commandOutput)) {
-      {'packages': final List<dynamic> packages} => {
-        for (final p in packages)
-          if (p case {'name': final String name, 'path': final String path})
-            name: path,
-      },
-      _ => throw StateError('Unexpected output from `pub workspace list`.'),
-    };
   }
 
   String _pubCommand(List<String> commandArgs) {
@@ -108,7 +84,7 @@ String _dartExecutable() {
   if (_isCompiledExe()) {
     return Platform.isWindows ? 'dart.exe' : 'dart';
   }
-  return Platform.executable;
+  return Platform.resolvedExecutable;
 }
 
 bool _isCompiledExe() =>

@@ -1,12 +1,10 @@
 import 'dart:convert';
 
-import 'package:path/path.dart' as p;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:pubspec_parse/pubspec_parse.dart' as parse;
 import 'package:pubviz/src/colors.dart';
 import 'package:pubviz/src/converters.dart';
 import 'package:pubviz/src/dependency.dart';
-import 'package:pubviz/src/deps_list.dart';
 import 'package:pubviz/src/options.dart';
 import 'package:pubviz/src/root_builder.dart';
 import 'package:pubviz/src/service.dart';
@@ -227,8 +225,40 @@ dev_dependencies:
 
   group('Service', () {
     test('vizRoot orElse throw StateError', () async {
-      final service = _SimpleMockService();
-      // 'c' is a dependency of 'b', but 'c' is not in allDeps
+      await d.dir('simple_pkg', [
+        d.file('pubspec.yaml', 'name: a\n'),
+        d.dir('.dart_tool', [
+          d.file('package_graph.json', '''
+{
+  "roots": ["a"],
+  "packages": [
+    {
+      "name": "a",
+      "version": "1.0.0",
+      "dependencies": ["b"]
+    },
+    {
+      "name": "b",
+      "version": "1.0.0",
+      "dependencies": ["c"]
+    }
+  ]
+}
+'''),
+          d.file('package_config.json', '''
+{
+  "configVersion": 2,
+  "packages": [
+    {"name": "a", "rootUri": "../", "packageUri": "lib/"},
+    {"name": "b", "rootUri": "file:///fake/b", "packageUri": "lib/"}
+  ]
+}
+'''),
+        ]),
+      ]).create();
+
+      final service = _SimpleMockService(d.path('simple_pkg'));
+      // 'c' is a dependency of 'b', but 'c' is not in package_graph.json
       expect(
         service.vizRoot(),
         throwsA(
@@ -243,8 +273,36 @@ dev_dependencies:
 
     test('vizRoot workspace with outdated', testOn: 'vm', () async {
       await d.dir('fake_pkg', [
-        d.file('pubspec.yaml', 'name: a'),
-        d.dir('member', [d.file('pubspec.yaml', 'name: member')]),
+        d.file('pubspec.yaml', 'name: a\n'),
+        d.dir('member', [d.file('pubspec.yaml', 'name: member\n')]),
+        d.dir('.dart_tool', [
+          d.file('package_graph.json', '''
+{
+  "roots": ["a", "member"],
+  "packages": [
+    {
+      "name": "a",
+      "version": "1.0.0",
+      "dependencies": ["member"]
+    },
+    {
+      "name": "member",
+      "version": "1.0.0",
+      "dependencies": []
+    }
+  ]
+}
+'''),
+          d.file('package_config.json', '''
+{
+  "configVersion": 2,
+  "packages": [
+    {"name": "a", "rootUri": "../", "packageUri": "lib/"},
+    {"name": "member", "rootUri": "../member", "packageUri": "lib/"}
+  ]
+}
+'''),
+        ]),
       ]).create();
 
       final service = _WorkspaceMockService(d.path('fake_pkg'));
@@ -257,46 +315,11 @@ dev_dependencies:
   });
 }
 
-class _WorkspaceMockService extends Service {
+final class _WorkspaceMockService extends Service {
   @override
   final String rootPackageDir;
 
   _WorkspaceMockService(this.rootPackageDir);
-
-  @override
-  parse.Pubspec rootPubspec() => parse.Pubspec.parse(
-    'name: a',
-    sourceUrl: Uri.file(p.join(rootPackageDir, 'pubspec.yaml')),
-  );
-
-  @override
-  DepsPackageEntry rootDeps() => DepsList.parse('''
-Dart SDK 3.0.0
-a 1.0.0
-
-dependencies:
-- member 1.0.0
-''').packages['a']!;
-
-  @override
-  Iterable<DepsPackageEntry> allDeps() {
-    final list = DepsList.parse('''
-Dart SDK 3.0.0
-a 1.0.0
-
-dependencies:
-- member 1.0.0
-
-member 1.0.0
-''');
-    return list.packages.values;
-  }
-
-  @override
-  Future<Map<String, String>> workspaceMembers() async => {
-    'a': '.',
-    'member': 'member',
-  };
 
   @override
   Map<String, dynamic> outdated() => {
@@ -310,32 +333,11 @@ member 1.0.0
   };
 }
 
-class _SimpleMockService extends Service {
-  late final _depsList = DepsList.parse('''
-Dart SDK 3.0.0
-a 1.0.0
-
-dependencies:
-- b 1.0.0
-  - c ^1.0.0
-
-b 1.0.0
-''');
-
+final class _SimpleMockService extends Service {
   @override
-  String get rootPackageDir => 'fake';
+  final String rootPackageDir;
 
-  @override
-  parse.Pubspec rootPubspec() => parse.Pubspec.parse('name: a');
-
-  @override
-  DepsPackageEntry rootDeps() => _depsList.packages['a']!;
-
-  @override
-  Iterable<DepsPackageEntry> allDeps() => _depsList.packages.values;
-
-  @override
-  Future<Map<String, String>> workspaceMembers() async => {'a': '.'};
+  _SimpleMockService(this.rootPackageDir);
 
   @override
   Map<String, dynamic> outdated() => {'packages': <void>[]};

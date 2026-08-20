@@ -625,13 +625,34 @@ environment:
 dependencies:
   args: ^2.0.0-dev
 '''),
-        d.file('pub_deps_list.txt', '''
-Dart SDK 3.0.0
-test_ahead 1.0.0
-
-dependencies:
-- args 2.0.0
+        d.dir('.dart_tool', [
+          d.file('package_graph.json', '''
+{
+  "roots": ["test_ahead"],
+  "packages": [
+    {
+      "name": "test_ahead",
+      "version": "1.0.0",
+      "dependencies": ["args"]
+    },
+    {
+      "name": "args",
+      "version": "2.0.0",
+      "dependencies": []
+    }
+  ]
+}
 '''),
+          d.file('package_config.json', '''
+{
+  "configVersion": 2,
+  "packages": [
+    {"name": "test_ahead", "rootUri": "../", "packageUri": "lib/"},
+    {"name": "args", "rootUri": "file:///fake/args", "packageUri": "lib/"}
+  ]
+}
+'''),
+        ]),
         d.file('outdated.json', '''
 {
   "packages": [
@@ -674,13 +695,34 @@ environment:
 dependencies:
   args: ^2.0.0
 '''),
-        d.file('pub_deps_list.txt', '''
-Dart SDK 3.0.0
-test_ahead_stable 1.0.0
-
-dependencies:
-- args 2.0.0
+        d.dir('.dart_tool', [
+          d.file('package_graph.json', '''
+{
+  "roots": ["test_ahead_stable"],
+  "packages": [
+    {
+      "name": "test_ahead_stable",
+      "version": "1.0.0",
+      "dependencies": ["args"]
+    },
+    {
+      "name": "args",
+      "version": "2.0.0",
+      "dependencies": []
+    }
+  ]
+}
 '''),
+          d.file('package_config.json', '''
+{
+  "configVersion": 2,
+  "packages": [
+    {"name": "test_ahead_stable", "rootUri": "../", "packageUri": "lib/"},
+    {"name": "args", "rootUri": "file:///fake/args", "packageUri": "lib/"}
+  ]
+}
+'''),
+        ]),
         d.file('outdated.json', '''
 {
   "packages": [
