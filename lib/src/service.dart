@@ -213,111 +213,66 @@ abstract class Service {
       }
     }
 
-    if (includeWorkspace) {
-      final workspaceRoots = graphFile.roots.isNotEmpty
-          ? graphFile.roots.toSet()
-          : {pubspec.name};
+    final primaryRoots = includeWorkspace && graphFile.roots.isNotEmpty
+        ? graphFile.roots.toSet()
+        : {pubspec.name};
 
-      for (final rootName in workspaceRoots) {
-        final graphEntry = graphFile.packages[rootName];
-        final memberPubspec =
-            getPubspec(rootName) ?? (rootName == pubspec.name ? pubspec : null);
+    for (final rootName in primaryRoots) {
+      final graphEntry = graphFile.packages[rootName];
+      final memberPubspec =
+          getPubspec(rootName) ?? (rootName == pubspec.name ? pubspec : null);
 
-        final dependencies = <Dependency>{};
-
-        // Production dependencies
-        final prodDepNames =
-            graphEntry?.dependencies ??
-            memberPubspec?.dependencies.keys ??
-            const <String>[];
-        for (final depName in prodDepNames) {
-          if (_ignoredPackages.contains(depName)) continue;
-          dependencies.add(
-            Dependency(
-              depName,
-              _getConstraint(memberPubspec, depName, isDev: false),
-              false,
-            ),
-          );
-        }
-
-        // Dev dependencies
-        if (!productionDependenciesOnly) {
-          final devDepNames =
-              graphEntry?.devDependencies ??
-              memberPubspec?.devDependencies.keys ??
-              const <String>[];
-          for (final depName in devDepNames) {
-            if (_ignoredPackages.contains(depName)) continue;
-            dependencies.add(
-              Dependency(
-                depName,
-                _getConstraint(memberPubspec, depName, isDev: true),
-                true,
-              ),
-            );
-          }
-        }
-
-        final isPublishToNone = memberPubspec?.publishTo == 'none';
-        final isRootInvocation = rootName == pubspec.name;
-
-        map[rootName] = VizPackage(
-          rootName,
-          isRootInvocation || isPublishToNone
-              ? null
-              : (graphEntry?.version ?? memberPubspec?.version),
-          SplayTreeSet.of(dependencies),
-          flagOutdated ? _latest(rootName) : null,
-          isPrimary: true,
-          onlyDev: false,
-          isPublishToNone: isPublishToNone,
-        );
-
-        for (final dep in dependencies) {
-          addPkg(dep.name);
-        }
-      }
-    } else {
-      final graphEntry = graphFile.packages[pubspec.name];
       final dependencies = <Dependency>{};
 
+      // Production dependencies
       final prodDepNames =
-          graphEntry?.dependencies ?? pubspec.dependencies.keys;
+          graphEntry?.dependencies ??
+          memberPubspec?.dependencies.keys ??
+          const <String>[];
       for (final depName in prodDepNames) {
         if (_ignoredPackages.contains(depName)) continue;
         dependencies.add(
           Dependency(
             depName,
-            _getConstraint(pubspec, depName, isDev: false),
+            _getConstraint(memberPubspec, depName, isDev: false),
             false,
           ),
         );
       }
 
+      // Dev dependencies
       if (!productionDependenciesOnly) {
         final devDepNames =
-            graphEntry?.devDependencies ?? pubspec.devDependencies.keys;
+            graphEntry?.devDependencies ??
+            memberPubspec?.devDependencies.keys ??
+            const <String>[];
         for (final depName in devDepNames) {
           if (_ignoredPackages.contains(depName)) continue;
           dependencies.add(
             Dependency(
               depName,
-              _getConstraint(pubspec, depName, isDev: true),
+              _getConstraint(memberPubspec, depName, isDev: true),
               true,
             ),
           );
         }
       }
 
-      map[pubspec.name] = VizPackage(
-        pubspec.name,
-        pubspec.version,
+      final isPublishToNone = memberPubspec?.publishTo == 'none';
+      final version = includeWorkspace
+          ? (rootName == pubspec.name || isPublishToNone
+                ? null
+                : (graphEntry?.version ?? memberPubspec?.version))
+          : memberPubspec?.version;
+
+      map[rootName] = VizPackage(
+        rootName,
+        version,
         SplayTreeSet.of(dependencies),
-        null,
+        includeWorkspace && flagOutdated ? _latest(rootName) : null,
         isPrimary: true,
         onlyDev: false,
-        isPublishToNone: pubspec.publishTo == 'none',
+        isPublishToNone: isPublishToNone,
       );
 
       for (final dep in dependencies) {
